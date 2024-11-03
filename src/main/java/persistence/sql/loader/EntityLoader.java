@@ -1,5 +1,7 @@
 package persistence.sql.loader;
 
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
 import persistence.sql.QueryBuilderFactory;
 import persistence.sql.clause.Clause;
 import persistence.sql.clause.WhereConditionalClause;
@@ -15,6 +17,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -72,13 +75,40 @@ public class EntityLoader<T> implements Loader<T>{
     }
 
     private String createSelectQuery(Object primaryKey) {
+
+        List<Clause> clauses = new ArrayList<>();
         String value = Clause.toColumnValue(primaryKey);
 
         WhereConditionalClause clause = WhereConditionalClause.builder()
                 .column(metadataLoader.getColumnName(metadataLoader.getPrimaryKeyField(), nameConverter))
                 .eq(value);
+        clauses.add(clause);
 
-        return QueryBuilderFactory.getInstance().buildQuery(QueryType.SELECT, metadataLoader, clause);
+        if (joinable()) {
+            clauses.addAll(createJoinQuery());
+        }
+
+        return QueryBuilderFactory.getInstance().buildQuery(QueryType.SELECT, metadataLoader, clauses.toArray(Clause[]::new));
+    }
+
+    private boolean joinable() {
+        return !metadataLoader.getFieldAllByPredicate(field -> {
+            OneToMany anno = field.getAnnotation(OneToMany.class);
+
+            return anno != null && anno.fetch() == FetchType.EAGER;
+        }).isEmpty();
+    }
+
+    private List<? extends Clause> createJoinQuery() {
+        List<Clause> clauses = new ArrayList<>();
+        List<Field> joinFields = metadataLoader.getFieldAllByPredicate(field -> {
+            OneToMany anno = field.getAnnotation(OneToMany.class);
+
+            return anno != null && anno.fetch() == FetchType.EAGER;
+        });
+
+        // TODO: Implement join query creation
+        return clauses;
     }
 
     public T mapRow(ResultSet resultSet) {
