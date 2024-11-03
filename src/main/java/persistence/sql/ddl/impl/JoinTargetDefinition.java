@@ -3,17 +3,17 @@ package persistence.sql.ddl.impl;
 import java.lang.reflect.Field;
 
 public class JoinTargetDefinition {
-    private final Object joinedEntity;
+    private final Class<?> joinedEntity;
     private final Field joinedField;
-    private final Object targetEntity;
+    private final Class<?> targetEntity;
 
-    public JoinTargetDefinition(Object joinedEntity, Field joinedField, Object targetEntity) {
+    public JoinTargetDefinition(Class<?> joinedEntity, Field joinedField, Class<?> targetEntity) {
         this.joinedEntity = joinedEntity;
         this.joinedField = joinedField;
         this.targetEntity = targetEntity;
     }
 
-    public Object getJoinedEntity() {
+    public Class<?> getJoinedEntity() {
         return joinedEntity;
     }
 
@@ -21,7 +21,7 @@ public class JoinTargetDefinition {
         return joinedField;
     }
 
-    public Object getTargetEntity() {
+    public Class<?> getTargetEntity() {
         return targetEntity;
     }
 

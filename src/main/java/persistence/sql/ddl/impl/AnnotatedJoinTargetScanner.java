@@ -41,7 +41,7 @@ public class AnnotatedJoinTargetScanner implements JoinTargetScanner {
                 .collect(Collectors.toSet());
     }
 
-    private Object getTargetEntity(FieldNode field) {
+    private Class<?> getTargetEntity(FieldNode field) {
         Type genericType = field.getField().getGenericType();
 
         return ReflectionUtils.collectionClass(genericType);

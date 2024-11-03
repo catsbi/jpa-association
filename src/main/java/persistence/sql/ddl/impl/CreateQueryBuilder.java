@@ -7,6 +7,7 @@ import persistence.sql.clause.Clause;
 import persistence.sql.common.util.CamelToSnakeConverter;
 import persistence.sql.common.util.NameConverter;
 import persistence.sql.data.QueryType;
+import persistence.sql.ddl.JoinQuerySupplier;
 import persistence.sql.ddl.QueryColumnSupplier;
 import persistence.sql.ddl.QueryConstraintSupplier;
 import persistence.sql.dml.MetadataLoader;
@@ -20,28 +21,36 @@ import java.util.stream.Collectors;
 public class CreateQueryBuilder implements QueryBuilder {
     private final NameConverter nameConverter;
     private final SortedSet<QueryColumnSupplier> columnQuerySuppliers;
+    private final SortedSet<JoinQuerySupplier> joinQuerySuppliers;
     private final SortedSet<QueryConstraintSupplier> constraintQuerySuppliers;
 
     public CreateQueryBuilder(NameConverter nameConverter,
                               SortedSet<QueryColumnSupplier> columnQuerySuppliers,
+                              SortedSet<JoinQuerySupplier> joinQuerySuppliers,
                               SortedSet<QueryConstraintSupplier> constraintQuerySuppliers) {
         this.nameConverter = nameConverter;
         this.columnQuerySuppliers = columnQuerySuppliers;
+        this.joinQuerySuppliers = joinQuerySuppliers;
         this.constraintQuerySuppliers = constraintQuerySuppliers;
     }
 
     public static CreateQueryBuilder createDefault() {
         SortedSet<QueryColumnSupplier> columnQuerySuppliers = new TreeSet<>();
+        SortedSet<JoinQuerySupplier> joinQuerySuppliers = new TreeSet<>();
         SortedSet<QueryConstraintSupplier> constraintQuerySuppliers = new TreeSet<>();
+        H2Dialect dialect = H2Dialect.create();
 
         columnQuerySuppliers.add(new ColumnNameSupplier((short) 1, CamelToSnakeConverter.getInstance()));
-        columnQuerySuppliers.add(new H2ColumnTypeSupplier((short) 2, H2Dialect.create()));
+        columnQuerySuppliers.add(new H2ColumnTypeSupplier((short) 2, dialect));
         columnQuerySuppliers.add(new ColumnGeneratedValueSupplier((short) 3));
         columnQuerySuppliers.add(new ColumnOptionSupplier((short) 4));
 
+        joinQuerySuppliers.add(new JoinColumnNameSupplier((short) 1, CamelToSnakeConverter.getInstance()));
+        joinQuerySuppliers.add(new JoinH2ColumnTypeSupplier((short) 2, dialect));
+
         constraintQuerySuppliers.add(new ConstraintPrimaryKeySupplier((short) 1, CamelToSnakeConverter.getInstance()));
 
-        return new CreateQueryBuilder(CamelToSnakeConverter.getInstance(), columnQuerySuppliers, constraintQuerySuppliers);
+        return new CreateQueryBuilder(CamelToSnakeConverter.getInstance(), columnQuerySuppliers, joinQuerySuppliers, constraintQuerySuppliers);
     }
 
     @Override
