@@ -3,6 +3,7 @@ package persistence.sql.holder;
 import persistence.sql.ddl.impl.JoinTargetDefinition;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,7 +20,7 @@ public class JoinTargetHolder {
     }
 
     public void add(Class<?> clazz, JoinTargetDefinition definitions) {
-        CONTEXT.computeIfAbsent(clazz, k -> Set.of()).add(definitions);
+        CONTEXT.computeIfAbsent(clazz, k -> new HashSet<>()).add(definitions);
     }
 
     public void add(JoinTargetDefinition definition) {
@@ -27,10 +28,6 @@ public class JoinTargetHolder {
     }
 
     public Set<JoinTargetDefinition> get(Class<?> clazz) {
-        if (!CONTEXT.containsKey(clazz)) {
-            throw new IllegalArgumentException("No join target definition found for " + clazz);
-        }
-
         return CONTEXT.get(clazz);
     }
 }

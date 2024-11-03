@@ -36,13 +36,13 @@ public class JoinH2ColumnTypeSupplier implements JoinQuerySupplier {
 
     @Override
     public String supply(JoinTargetDefinition definition) {
-        Object joinedEntity = definition.getJoinedEntity();
+        Class<?> joinedEntity = definition.getJoinedEntity();
 
         if (joinedEntity == null) {
             throw new IllegalArgumentException("Joined field must not be null");
         }
 
-        EntityNode<?> entityNode = EntityNode.from(joinedEntity.getClass());
+        EntityNode<?> entityNode = EntityNode.from(joinedEntity);
         FieldNode idField = entityNode.getIdField();
 
         Class<?> fieldType = idField.getFieldType();

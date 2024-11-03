@@ -11,11 +11,10 @@ import persistence.sql.ddl.JoinQuerySupplier;
 import persistence.sql.ddl.QueryColumnSupplier;
 import persistence.sql.ddl.QueryConstraintSupplier;
 import persistence.sql.dml.MetadataLoader;
+import persistence.sql.holder.JoinTargetHolder;
 import persistence.sql.node.FieldNode;
 
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class CreateQueryBuilder implements QueryBuilder {
@@ -73,11 +72,26 @@ public class CreateQueryBuilder implements QueryBuilder {
     }
 
     private String getColumnClause(MetadataLoader<?> loader) {
-        return loader.getFieldAllByPredicate(field -> !field.isAnnotationPresent(Transient.class)
-                && !field.isAnnotationPresent(OneToMany.class))
+        List<String> columnQueries = loader.getFieldAllByPredicate(field -> !field.isAnnotationPresent(Transient.class)
+                        && !field.isAnnotationPresent(OneToMany.class))
                 .stream().map(FieldNode::from)
                 .map(this::buildColumnQuery)
-                .collect(Collectors.joining(", "));
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        Set<JoinTargetDefinition> joinTargetDefinitions = JoinTargetHolder.getInstance().get(loader.getEntityType());
+        if (joinTargetDefinitions == null || joinTargetDefinitions.isEmpty()) {
+            return String.join(", ", columnQueries);
+        }
+
+        joinTargetDefinitions.stream().map(this::buildJoinQuery)
+                .forEach(columnQueries::add);
+
+        return String.join(", ", columnQueries);
+    }
+
+    private String buildJoinQuery(JoinTargetDefinition definition) {
+        return joinQuerySuppliers.stream().filter(supplier -> supplier.supported(definition))
+                .map(supplier -> supplier.supply(definition).trim()).collect(Collectors.joining(" "));
     }
 
     private String buildColumnQuery(FieldNode fieldNode) {
