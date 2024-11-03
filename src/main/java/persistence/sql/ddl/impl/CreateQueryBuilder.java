@@ -1,5 +1,6 @@
 package persistence.sql.ddl.impl;
 
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Transient;
 import persistence.sql.QueryBuilder;
 import persistence.sql.clause.Clause;
@@ -56,23 +57,32 @@ public class CreateQueryBuilder implements QueryBuilder {
     @Override
     public String build(MetadataLoader<?> loader, Clause... clauses) {
         String tableName = loader.getTableName();
-        String columns = loader.getFieldAllByPredicate(field -> !field.isAnnotationPresent(Transient.class))
+        String columns = getColumnClause(loader);
+        String constraints = getConstraintClause(loader);
+
+        return "CREATE TABLE %s (%s, %S);".formatted(nameConverter.convert(tableName), columns, constraints);
+    }
+
+    private String getColumnClause(MetadataLoader<?> loader) {
+        return loader.getFieldAllByPredicate(field -> !field.isAnnotationPresent(Transient.class)
+                && !field.isAnnotationPresent(OneToMany.class))
                 .stream().map(FieldNode::from)
                 .map(this::buildColumnQuery)
                 .collect(Collectors.joining(", "));
-
-        String constraints = loader.getFieldAllByPredicate(field -> !field.isAnnotationPresent(Transient.class))
-                .stream().map(FieldNode::from)
-                .map(this::buildConstraintQuery)
-                .filter(s -> !s.isBlank())
-                .collect(Collectors.joining(", "));
-
-        return "CREATE TABLE %s (%s, %S);".formatted(nameConverter.convert(tableName), columns, constraints);
     }
 
     private String buildColumnQuery(FieldNode fieldNode) {
         return columnQuerySuppliers.stream().filter(supplier -> supplier.supported(fieldNode))
                 .map(supplier -> supplier.supply(fieldNode).trim()).collect(Collectors.joining(" "));
+    }
+
+    private String getConstraintClause(MetadataLoader<?> loader) {
+        return loader.getFieldAllByPredicate(field -> !field.isAnnotationPresent(Transient.class) &&
+                        !field.isAnnotationPresent(OneToMany.class))
+                .stream().map(FieldNode::from)
+                .map(this::buildConstraintQuery)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.joining(", "));
     }
 
     private String buildConstraintQuery(FieldNode fieldNode) {
