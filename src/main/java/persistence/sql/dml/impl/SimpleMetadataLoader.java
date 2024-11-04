@@ -148,6 +148,11 @@ public class SimpleMetadataLoader<T> implements MetadataLoader<T> {
         return clazz.isAnnotationPresent(targetAnno);
     }
 
+    @Override
+    public String getTableAlias() {
+        return clazz.getSimpleName().toLowerCase();
+    }
+
     private boolean isNotTransient(Field field) {
         return !field.isAnnotationPresent(Transient.class);
     }

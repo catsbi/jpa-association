@@ -86,4 +86,6 @@ public interface MetadataLoader<T> {
      * @param targetAnno 확인할 클래스
      */
     boolean isClassAnnotationPresent(Class<? extends Annotation> targetAnno);
+
+    String getTableAlias();
 }

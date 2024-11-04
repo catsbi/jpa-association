@@ -1,5 +1,6 @@
 package persistence.sql.dml.impl;
 
+import org.jetbrains.annotations.NotNull;
 import persistence.sql.QueryBuilder;
 import persistence.sql.clause.Clause;
 import persistence.sql.common.util.NameConverter;
@@ -28,7 +29,7 @@ public class SelectQueryBuilder implements QueryBuilder {
 
     @Override
     public String build(MetadataLoader<?> loader, Clause... clauses) {
-        String columns = String.join(DELIMITER, loader.getColumnNameAll(nameConverter));
+        String columns = getColumnClause(loader, clauses);
         String tableName = loader.getTableName();
 
         StringBuilder query = new StringBuilder("SELECT %s FROM %s".formatted(columns, tableName));
@@ -41,5 +42,12 @@ public class SelectQueryBuilder implements QueryBuilder {
         }
 
         return query.toString();
+    }
+
+    @NotNull
+    private String getColumnClause(MetadataLoader<?> loader, Clause[] clauses) {
+        List<Clause> joinClauses = Clause.filterByClauseType(clauses, ClauseType.LEFT_JOIN);
+
+        return String.join(DELIMITER, loader.getColumnNameAll(nameConverter));
     }
 }
