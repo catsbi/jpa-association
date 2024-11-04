@@ -82,7 +82,7 @@ public class EntityLoader<T> implements Loader<T>{
         List<Clause> clauses = new ArrayList<>();
         String value = Clause.toColumnValue(primaryKey);
 
-        WhereConditionalClause clause = WhereConditionalClause.builder()
+        WhereConditionalClause clause = WhereConditionalClause.builder(metadataLoader.getTableAlias())
                 .column(metadataLoader.getColumnName(metadataLoader.getPrimaryKeyField(), nameConverter))
                 .eq(value);
         clauses.add(clause);

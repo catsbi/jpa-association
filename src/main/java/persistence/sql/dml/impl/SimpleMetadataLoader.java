@@ -159,7 +159,7 @@ public class SimpleMetadataLoader<T> implements MetadataLoader<T> {
 
     @Override
     public String getTableAlias() {
-        return clazz.getSimpleName().toLowerCase();
+        return getTableName().toLowerCase();
     }
 
     @Override
