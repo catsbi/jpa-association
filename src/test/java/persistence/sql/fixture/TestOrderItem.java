@@ -14,6 +14,14 @@ public class TestOrderItem {
 
     private Integer quantity;
 
+    public TestOrderItem() {
+    }
+
+    public TestOrderItem(String product, Integer quantity) {
+        this.product = product;
+        this.quantity = quantity;
+    }
+
     public Long getId() {
         return id;
     }

@@ -37,6 +37,8 @@ public interface MetadataLoader<T> {
 
     String getColumnName(Field field, NameConverter nameConverter);
 
+    String getJoinColumnName(Field field, NameConverter nameConverter);
+
     /**
      * 필드명을 조회해 반환한다.
      */

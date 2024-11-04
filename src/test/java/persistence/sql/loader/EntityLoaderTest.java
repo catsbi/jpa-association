@@ -90,8 +90,6 @@ class EntityLoaderTest extends TestEntityInitialize {
     @Test
     @DisplayName("load 함수를 통해 연관관계가 있는 특정 엔티티를 조회할 수 있다.")
     void testLoadWithAssociation() {
-        // given
-
         // when
         TestOrder actual = orderLoader.load(1L);
 

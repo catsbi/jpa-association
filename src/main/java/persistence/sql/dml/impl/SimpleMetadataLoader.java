@@ -1,9 +1,6 @@
 package persistence.sql.dml.impl;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
+import jakarta.persistence.*;
 import org.jetbrains.annotations.Nullable;
 import persistence.sql.common.util.NameConverter;
 import persistence.sql.dml.MetadataLoader;
@@ -76,6 +73,30 @@ public class SimpleMetadataLoader<T> implements MetadataLoader<T> {
                 .orElseThrow(() -> new IllegalArgumentException("Field not found"));
 
         return getColumnNameByField(foundField, nameConverter);
+    }
+
+    @Override
+    public String getJoinColumnName(Field field, NameConverter nameConverter) {
+        Field foundField = Arrays.stream(clazz.getDeclaredFields())
+                .filter(this::isNotTransient)
+                .filter(field::equals)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Field not found"));
+
+        return getJoinColumnNameByField(foundField, nameConverter);
+    }
+
+    private String getJoinColumnNameByField(Field field, NameConverter nameConverter) {
+        if (field.isAnnotationPresent(Transient.class)) {
+            return null;
+        }
+
+        JoinColumn anno = field.getAnnotation(JoinColumn.class);
+        if (anno != null && !anno.name().isBlank()) {
+            return anno.name();
+        }
+
+        return nameConverter.convert(field.getName());
     }
 
     @Override

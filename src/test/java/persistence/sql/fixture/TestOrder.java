@@ -2,6 +2,7 @@ package persistence.sql.fixture;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -14,9 +15,21 @@ public class TestOrder {
 
     private String orderNumber;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "order_id")
-    private List<TestOrderItem> orderItems;
+    private List<TestOrderItem> orderItems = new ArrayList<>();
+
+    public TestOrder(String orderNumber) {
+        this.orderNumber = orderNumber;
+    }
+
+    public TestOrder() {
+
+    }
+
+    public void addOrderItem(TestOrderItem orderItem) {
+        orderItems.add(orderItem);
+    }
 
     public Long getId() {
         return id;
