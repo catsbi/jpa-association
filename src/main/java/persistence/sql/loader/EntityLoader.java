@@ -17,7 +17,6 @@ import persistence.util.ReflectionUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,7 +24,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
-public class EntityLoader<T> implements Loader<T>{
+public class EntityLoader<T> implements Loader<T> {
     private static final Logger logger = Logger.getLogger(EntityLoader.class.getName());
 
     private final Database database;
@@ -126,10 +125,11 @@ public class EntityLoader<T> implements Loader<T>{
             int columnCount = metadataLoader.getColumnCount();
             AtomicInteger cur = new AtomicInteger(1);
 
-            while (cur.get() < columnCount) {
+            while (cur.get() <= columnCount) {
                 Field curField = metadataLoader.getField(cur.get() - 1);
 
                 Object columnValue = getColumnValue(resultSet, curField, cur);
+                cur.incrementAndGet();
                 curField.setAccessible(true);
                 curField.set(entity, columnValue);
             }
@@ -143,7 +143,6 @@ public class EntityLoader<T> implements Loader<T>{
 
     private Object getColumnValue(ResultSet resultSet, Field curField, AtomicInteger cur) throws SQLException {
         if (isAssociationField(curField)) {
-            cur.incrementAndGet();
             return getAssociationField(resultSet, curField, cur);
         }
         return resultSet.getObject(cur.get());
@@ -160,19 +159,19 @@ public class EntityLoader<T> implements Loader<T>{
             Class<?> joinType = ReflectionUtils.collectionClass(genericType);
             MetadataLoader<?> joinLoader = new SimpleMetadataLoader<>(joinType);
 
-            while (resultSet.next()) {
+            do {
                 Object joinEntity = joinLoader.getNoArgConstructor().newInstance();
 
                 int columnCount = joinLoader.getColumnCount();
-                for (int i = 1; i <= columnCount; i++) {
-                    Field joinField = joinLoader.getField(i - 1);
+                for (int i = 0; i < columnCount; i++) {
+                    Field joinField = joinLoader.getField(i);
                     Object columnValue = resultSet.getObject(cur.get() + i);
                     joinField.setAccessible(true);
                     joinField.set(joinEntity, columnValue);
                 }
 
                 collection.add(joinEntity);
-            }
+            } while (resultSet.next());
 
             return collection;
         } catch (ReflectiveOperationException | SQLException e) {
