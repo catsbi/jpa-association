@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 public class EntityLoader<T> implements Loader<T>{
@@ -95,20 +96,12 @@ public class EntityLoader<T> implements Loader<T>{
     }
 
     private boolean joinable() {
-        return !metadataLoader.getFieldAllByPredicate(field -> {
-            OneToMany anno = field.getAnnotation(OneToMany.class);
-
-            return anno != null && anno.fetch() == FetchType.EAGER;
-        }).isEmpty();
+        return !metadataLoader.getFieldAllByPredicate(EntityLoader::isEager).isEmpty();
     }
 
     private List<? extends Clause> createJoinQuery() {
         List<Clause> clauses = new ArrayList<>();
-        List<Field> joinFields = metadataLoader.getFieldAllByPredicate(field -> {
-            OneToMany anno = field.getAnnotation(OneToMany.class);
-
-            return anno != null && anno.fetch() == FetchType.EAGER;
-        });
+        List<Field> joinFields = metadataLoader.getFieldAllByPredicate(EntityLoader::isEager);
 
         for (Field joinField : joinFields) {
             Type genericType = joinField.getGenericType();
@@ -120,24 +113,70 @@ public class EntityLoader<T> implements Loader<T>{
         return clauses;
     }
 
+    private static boolean isEager(Field field) {
+        OneToMany anno = field.getAnnotation(OneToMany.class);
+
+        return anno != null && anno.fetch() == FetchType.EAGER;
+    }
+
     public T mapRow(ResultSet resultSet) {
         try {
             T entity = metadataLoader.getNoArgConstructor().newInstance();
 
-            ResultSetMetaData metaData = resultSet.getMetaData();
-            int columnCount = metaData.getColumnCount();
+            int columnCount = metadataLoader.getColumnCount();
+            AtomicInteger cur = new AtomicInteger(1);
 
-            for (int i = 1; i <= columnCount; i++) {
-                Object columnValue = resultSet.getObject(i);
+            while (cur.get() < columnCount) {
+                Field curField = metadataLoader.getField(cur.get() - 1);
 
-                Field field = metadataLoader.getField(i - 1);
-                field.setAccessible(true);
-                field.set(entity, columnValue);
+                Object columnValue = getColumnValue(resultSet, curField, cur);
+                curField.setAccessible(true);
+                curField.set(entity, columnValue);
             }
 
             return entity;
         } catch (ReflectiveOperationException | SQLException e) {
             logger.severe("Failed to map row to entity");
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private Object getColumnValue(ResultSet resultSet, Field curField, AtomicInteger cur) throws SQLException {
+        if (isAssociationField(curField)) {
+            cur.incrementAndGet();
+            return getAssociationField(resultSet, curField, cur);
+        }
+        return resultSet.getObject(cur.get());
+    }
+
+    private boolean isAssociationField(Field curField) {
+        return Collection.class.isAssignableFrom(curField.getType()) && curField.isAnnotationPresent(OneToMany.class);
+    }
+
+    private Object getAssociationField(ResultSet resultSet, Field curField, AtomicInteger cur) {
+        try {
+            Collection<Object> collection = new ArrayList<>();
+            Type genericType = curField.getGenericType();
+            Class<?> joinType = ReflectionUtils.collectionClass(genericType);
+            MetadataLoader<?> joinLoader = new SimpleMetadataLoader<>(joinType);
+
+            while (resultSet.next()) {
+                Object joinEntity = joinLoader.getNoArgConstructor().newInstance();
+
+                int columnCount = joinLoader.getColumnCount();
+                for (int i = 1; i <= columnCount; i++) {
+                    Field joinField = joinLoader.getField(i - 1);
+                    Object columnValue = resultSet.getObject(cur.get() + i);
+                    joinField.setAccessible(true);
+                    joinField.set(joinEntity, columnValue);
+                }
+
+                collection.add(joinEntity);
+            }
+
+            return collection;
+        } catch (ReflectiveOperationException | SQLException e) {
+            logger.severe("Failed to handle association field");
             throw new IllegalStateException(e);
         }
     }

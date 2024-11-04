@@ -37,6 +37,7 @@ class EntityLoaderTest extends TestEntityInitialize {
         database.executeUpdate("INSERT INTO users (nick_name, old, email) VALUES ('navicat', 32, 'navi@hanmail.net')");
 
         database.executeUpdate("INSERT INTO orders (order_number) VALUES ('1')");
+        database.executeUpdate("INSERT INTO order_items (product, quantity, order_id) VALUES ('apple', 10, 1)");
     }
 
     @Test
