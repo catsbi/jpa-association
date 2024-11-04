@@ -6,7 +6,6 @@ import persistence.sql.fixture.TestOrder;
 import persistence.sql.fixture.TestOrderItem;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("LeftJoinClause 테스트")
 class LeftJoinClauseTest {
@@ -22,5 +21,6 @@ class LeftJoinClauseTest {
 
         // then
         assertThat(leftJoinClause.clause()).isEqualTo("LEFT JOIN order_items testorderitem ON testorder.id = testorderitem.id");
+        assertThat(leftJoinClause.columns()).isEqualTo("testorderitem.id, testorderitem.product, testorderitem.quantity");
     }
 }

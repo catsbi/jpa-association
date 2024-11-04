@@ -3,6 +3,8 @@ package persistence.sql.clause;
 public interface JoinClause extends Clause {
     String JOIN_QUERY_FORMAT = "LEFT JOIN %s ON %s = %s";
 
+    String columns();
+
     String table();
 
     String leftColumn();

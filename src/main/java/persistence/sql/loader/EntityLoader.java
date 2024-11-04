@@ -4,6 +4,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import persistence.sql.QueryBuilderFactory;
 import persistence.sql.clause.Clause;
+import persistence.sql.clause.LeftJoinClause;
 import persistence.sql.clause.WhereConditionalClause;
 import persistence.sql.common.util.CamelToSnakeConverter;
 import persistence.sql.common.util.NameConverter;
@@ -11,8 +12,10 @@ import persistence.sql.data.QueryType;
 import persistence.sql.dml.Database;
 import persistence.sql.dml.MetadataLoader;
 import persistence.sql.dml.impl.SimpleMetadataLoader;
+import persistence.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -107,7 +110,13 @@ public class EntityLoader<T> implements Loader<T>{
             return anno != null && anno.fetch() == FetchType.EAGER;
         });
 
-        // TODO: Implement join query creation
+        for (Field joinField : joinFields) {
+            Type genericType = joinField.getGenericType();
+            Class<?> joinType = ReflectionUtils.collectionClass(genericType);
+            LeftJoinClause leftJoinClause = LeftJoinClause.of(metadataLoader.getEntityType(), joinType);
+            clauses.add(leftJoinClause);
+        }
+
         return clauses;
     }
 
