@@ -193,8 +193,18 @@ class DefaultEntityManagerTest extends TestEntityInitialize {
         testOrder.addOrderItem(grape);
 
         entityManager.persist(testOrder);
+        entityManager.getTransaction().begin();
+        entityManager.getTransaction().commit();
 
-        System.out.println("testOrder = " + testOrder);
+        // when
+        TestOrder actual = entityManager.find(TestOrder.class, testOrder.getId());
+
+        // then
+        assertAll(
+                () -> assertThat(actual).isNotNull(),
+                () -> assertThat(actual.getOrderItems()).hasSize(2),
+                () -> assertThat(actual.getOrderItems()).containsAll(List.of(apple, grape))
+        );
     }
 
 }
