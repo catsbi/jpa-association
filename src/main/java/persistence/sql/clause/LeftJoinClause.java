@@ -3,15 +3,12 @@ package persistence.sql.clause;
 import persistence.sql.common.util.CamelToSnakeConverter;
 import persistence.sql.common.util.NameConverter;
 import persistence.sql.data.ClauseType;
-import persistence.sql.ddl.impl.JoinTargetDefinition;
 import persistence.sql.dml.MetadataLoader;
 import persistence.sql.dml.impl.SimpleMetadataLoader;
-import persistence.sql.holder.JoinTargetHolder;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public record LeftJoinClause(String table, String leftColumn, String rightColumn, String columns) implements JoinClause {

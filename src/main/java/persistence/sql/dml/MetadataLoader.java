@@ -88,4 +88,8 @@ public interface MetadataLoader<T> {
     boolean isClassAnnotationPresent(Class<? extends Annotation> targetAnno);
 
     String getTableAlias();
+
+    String getTableNameWithAlias();
+
+    List<String> getColumnNameAllWithAlias(NameConverter nameConverter);
 }

@@ -106,6 +106,15 @@ public class SimpleMetadataLoader<T> implements MetadataLoader<T> {
     }
 
     @Override
+    public List<String> getColumnNameAllWithAlias(NameConverter nameConverter) {
+        int columnCount = getColumnCount();
+
+        return IntStream.range(0, columnCount)
+                .mapToObj(index -> getTableAlias() + "." + getColumnName(index, nameConverter))
+                .toList();
+    }
+
+    @Override
     public Field getPrimaryKeyField() {
         return Arrays.stream(clazz.getDeclaredFields())
                 .filter(this::isNotTransient)
@@ -151,6 +160,11 @@ public class SimpleMetadataLoader<T> implements MetadataLoader<T> {
     @Override
     public String getTableAlias() {
         return clazz.getSimpleName().toLowerCase();
+    }
+
+    @Override
+    public String getTableNameWithAlias() {
+        return getTableName() + " " + getTableAlias();
     }
 
     private boolean isNotTransient(Field field) {

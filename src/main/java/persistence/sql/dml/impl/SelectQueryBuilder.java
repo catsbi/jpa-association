@@ -3,12 +3,14 @@ package persistence.sql.dml.impl;
 import org.jetbrains.annotations.NotNull;
 import persistence.sql.QueryBuilder;
 import persistence.sql.clause.Clause;
+import persistence.sql.clause.LeftJoinClause;
 import persistence.sql.common.util.NameConverter;
 import persistence.sql.data.ClauseType;
 import persistence.sql.data.QueryType;
 import persistence.sql.dml.MetadataLoader;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class SelectQueryBuilder implements QueryBuilder {
     private final NameConverter nameConverter;
@@ -29,12 +31,21 @@ public class SelectQueryBuilder implements QueryBuilder {
 
     @Override
     public String build(MetadataLoader<?> loader, Clause... clauses) {
-        String columns = getColumnClause(loader, clauses);
-        String tableName = loader.getTableName();
+        List<Clause> joinClauses = Clause.filterByClauseType(clauses, ClauseType.LEFT_JOIN);
+
+        String columns = getColumnClause(loader, joinClauses);
+        String tableName = loader.getTableNameWithAlias();
 
         StringBuilder query = new StringBuilder("SELECT %s FROM %s".formatted(columns, tableName));
 
         List<Clause> conditionalClauses = Clause.filterByClauseType(clauses, ClauseType.WHERE);
+
+        if (!joinClauses.isEmpty()) {
+            query.append(" ");
+            query.append(joinClauses.stream()
+                    .map(Clause::clause)
+                    .collect(Collectors.joining(" ")));
+        }
 
         if (!conditionalClauses.isEmpty()) {
             query.append(" WHERE ");
@@ -45,9 +56,14 @@ public class SelectQueryBuilder implements QueryBuilder {
     }
 
     @NotNull
-    private String getColumnClause(MetadataLoader<?> loader, Clause[] clauses) {
-        List<Clause> joinClauses = Clause.filterByClauseType(clauses, ClauseType.LEFT_JOIN);
+    private String getColumnClause(MetadataLoader<?> loader, List<Clause> joinClauses) {
 
-        return String.join(DELIMITER, loader.getColumnNameAll(nameConverter));
+
+        String originColumn = String.join(DELIMITER, loader.getColumnNameAllWithAlias(nameConverter));
+        String joinColumns = joinClauses.stream()
+                .map(clause -> ((LeftJoinClause) clause).columns())
+                .collect(Collectors.joining(DELIMITER));
+
+        return originColumn + DELIMITER + joinColumns;
     }
 }
