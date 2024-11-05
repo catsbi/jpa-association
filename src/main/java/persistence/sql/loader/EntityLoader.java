@@ -45,6 +45,12 @@ public class EntityLoader<T> implements Loader<T> {
         this.nameConverter = nameConverter;
     }
 
+    private static boolean isEager(Field field) {
+        OneToMany anno = field.getAnnotation(OneToMany.class);
+
+        return anno != null && anno.fetch() == FetchType.EAGER;
+    }
+
     public MetadataLoader<T> getMetadataLoader() {
         return metadataLoader;
     }
@@ -52,6 +58,21 @@ public class EntityLoader<T> implements Loader<T> {
     @Override
     public List<T> loadAll() {
         String selectQuery = QueryBuilderFactory.getInstance().buildQuery(QueryType.SELECT, metadataLoader);
+
+        return database.executeQuery(selectQuery, resultSet -> {
+            List<T> entities = new ArrayList<>();
+
+            while (resultSet.next()) {
+                entities.add(mapRow(resultSet));
+            }
+
+            return entities;
+        });
+    }
+
+    @Override
+    public List<T> loadAllByForeignKey(Object foreignKey, MetadataLoader<?> foreignLoader) {
+        String selectQuery = createSelectQuery(foreignKey, foreignLoader);
 
         return database.executeQuery(selectQuery, resultSet -> {
             List<T> entities = new ArrayList<>();
@@ -75,6 +96,58 @@ public class EntityLoader<T> implements Loader<T> {
 
             return null;
         });
+    }
+
+    @Override
+    public T loadByForeignKey(Object foreignKey, MetadataLoader<?> foreignLoader) {
+        String selectQuery = createSelectQuery(foreignKey, foreignLoader);
+
+        return database.executeQuery(selectQuery, resultSet -> {
+            if (resultSet.next()) {
+                return mapRow(resultSet);
+            }
+
+            return null;
+        });
+
+    }
+
+    private String createSelectQuery(Object foreignKey, MetadataLoader<?> foreignLoader) {
+        List<Clause> clauses = new ArrayList<>();
+        String value = Clause.toColumnValue(foreignKey);
+
+        WhereConditionalClause clause = WhereConditionalClause.builder(metadataLoader.getTableAlias())
+                .column(extractForeignColumnName(foreignLoader))
+                .eq(value);
+        clauses.add(clause);
+
+        if (joinable()) {
+            clauses.addAll(createJoinQuery());
+        }
+
+        return QueryBuilderFactory.getInstance().buildQuery(QueryType.SELECT, metadataLoader, clauses.toArray(Clause[]::new));
+    }
+
+    private String extractForeignColumnName(MetadataLoader<?> foreignLoader) {
+        List<Field> foreignFields = foreignLoader.getFieldAllByPredicate(field -> {
+            boolean hasAnno = field.isAnnotationPresent(OneToMany.class);
+            Class<?> type = field.getType();
+            if (Collection.class.isAssignableFrom(field.getType())) {
+                type = ReflectionUtils.collectionClass(field.getGenericType());
+            }
+
+            return hasAnno && type.equals(metadataLoader.getEntityType());
+        });
+
+        if (foreignFields.isEmpty()) {
+            throw new IllegalArgumentException("No foreign key found");
+        }
+
+        if (foreignFields.size() > 1) {
+            throw new IllegalArgumentException("Multiple foreign keys found");
+        }
+
+        return foreignLoader.getJoinColumnName(foreignFields.getFirst(), nameConverter);
     }
 
     private String createSelectQuery(Object primaryKey) {
@@ -110,12 +183,6 @@ public class EntityLoader<T> implements Loader<T> {
         }
 
         return clauses;
-    }
-
-    private static boolean isEager(Field field) {
-        OneToMany anno = field.getAnnotation(OneToMany.class);
-
-        return anno != null && anno.fetch() == FetchType.EAGER;
     }
 
     public T mapRow(ResultSet resultSet) {

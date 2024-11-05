@@ -7,7 +7,7 @@ import java.util.logging.Logger;
 public class HelloHandler implements InvocationHandler {
     private static final Logger logger = Logger.getLogger(HelloHandler.class.getName());
 
-    private Hello hello;
+    private final Hello hello;
 
     public HelloHandler(Hello hello) {
         this.hello = hello;

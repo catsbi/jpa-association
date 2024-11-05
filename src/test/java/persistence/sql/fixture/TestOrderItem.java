@@ -20,6 +20,11 @@ public class TestOrderItem {
     }
 
     public TestOrderItem(String product, Integer quantity) {
+        this(null, product, quantity);
+    }
+
+    public TestOrderItem(Long id, String product, Integer quantity) {
+        this.id = id;
         this.product = product;
         this.quantity = quantity;
     }
