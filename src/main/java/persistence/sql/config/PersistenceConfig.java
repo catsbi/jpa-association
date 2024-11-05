@@ -2,6 +2,8 @@ package persistence.sql.config;
 
 import database.DatabaseServer;
 import database.H2;
+import persistence.proxy.ProxyFactory;
+import persistence.proxy.impl.JdkProxyFactory;
 import persistence.sql.common.util.CamelToSnakeConverter;
 import persistence.sql.common.util.NameConverter;
 import persistence.sql.context.EntityPersister;
@@ -82,5 +84,9 @@ public class PersistenceConfig {
             return databaseServer;
         }
         return databaseServer;
+    }
+
+    public ProxyFactory proxyFactory() {
+        return new JdkProxyFactory();
     }
 }

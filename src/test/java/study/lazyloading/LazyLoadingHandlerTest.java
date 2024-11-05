@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import persistence.config.TestPersistenceConfig;
 import persistence.proxy.ProxyFactory;
+import persistence.sql.context.PersistenceContext;
 import persistence.sql.dml.Database;
 import persistence.sql.dml.TestEntityInitialize;
 import persistence.sql.fixture.TestOrder;
@@ -19,11 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 @DisplayName("LazyLoadingHandler 테스트")
 class LazyLoadingHandlerTest extends TestEntityInitialize {
     private final ProxyFactory proxyFactory = new TestProxyFactory();
+    private PersistenceContext persistenceContext;
 
     @BeforeEach
     void setup() throws SQLException {
         TestPersistenceConfig config = TestPersistenceConfig.getInstance();
         Database database = config.database();
+        persistenceContext = config.persistenceContext();
 
         database.executeUpdate("INSERT INTO orders (order_number) VALUES ('1')");
         database.executeUpdate("INSERT INTO order_items (product, quantity, order_id) VALUES ('apple', 10, 1)");
@@ -34,7 +37,7 @@ class LazyLoadingHandlerTest extends TestEntityInitialize {
     @DisplayName("생성자를 통해 프록시 객체를 생성할 수 있다.")
     void constructor() {
 
-        List<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class);
+        List<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, persistenceContext);
 
         assertAll(
                 () -> assertThat(proxy).isNotNull(),

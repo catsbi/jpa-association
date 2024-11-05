@@ -2,12 +2,14 @@ package persistence.sql.loader;
 
 import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
+import persistence.proxy.ProxyFactory;
 import persistence.sql.QueryBuilderFactory;
 import persistence.sql.clause.Clause;
 import persistence.sql.clause.LeftJoinClause;
 import persistence.sql.clause.WhereConditionalClause;
 import persistence.sql.common.util.CamelToSnakeConverter;
 import persistence.sql.common.util.NameConverter;
+import persistence.sql.context.PersistenceContext;
 import persistence.sql.data.QueryType;
 import persistence.sql.dml.Database;
 import persistence.sql.dml.MetadataLoader;
@@ -30,25 +32,33 @@ public class EntityLoader<T> implements Loader<T> {
     private final Database database;
     private final MetadataLoader<T> metadataLoader;
     private final NameConverter nameConverter;
+    private final ProxyFactory proxyFactory;
 
-    public EntityLoader(Class<T> entityType, Database database) {
+    public EntityLoader(Class<T> entityType, Database database, ProxyFactory proxyFactory) {
         this(database,
                 new SimpleMetadataLoader<>(entityType),
-                CamelToSnakeConverter.getInstance());
+                CamelToSnakeConverter.getInstance(), proxyFactory);
     }
 
     public EntityLoader(Database database,
                         MetadataLoader<T> metadataLoader,
-                        NameConverter nameConverter) {
+                        NameConverter nameConverter, ProxyFactory proxyFactory) {
         this.database = database;
         this.metadataLoader = metadataLoader;
         this.nameConverter = nameConverter;
+        this.proxyFactory = proxyFactory;
     }
 
     private static boolean isEager(Field field) {
         OneToMany anno = field.getAnnotation(OneToMany.class);
 
         return anno != null && anno.fetch() == FetchType.EAGER;
+    }
+
+    private static boolean isLazy(Field field) {
+        OneToMany anno = field.getAnnotation(OneToMany.class);
+
+        return anno != null && anno.fetch() == FetchType.LAZY;
     }
 
     public MetadataLoader<T> getMetadataLoader() {
@@ -209,14 +219,16 @@ public class EntityLoader<T> implements Loader<T> {
     }
 
     private Object getColumnValue(ResultSet resultSet, Field curField, AtomicInteger cur) throws SQLException {
-        if (isAssociationField(curField)) {
+        if (isAssociationEagerField(curField)) {
             return getAssociationField(resultSet, curField, cur);
         }
+
         return resultSet.getObject(cur.get());
     }
 
-    private boolean isAssociationField(Field curField) {
-        return Collection.class.isAssignableFrom(curField.getType()) && curField.isAnnotationPresent(OneToMany.class);
+    private boolean isAssociationEagerField(Field curField) {
+        OneToMany anno = curField.getAnnotation(OneToMany.class);
+        return Collection.class.isAssignableFrom(curField.getType()) && anno != null && anno.fetch() == FetchType.EAGER;
     }
 
     private Object getAssociationField(ResultSet resultSet, Field curField, AtomicInteger cur) {
@@ -244,6 +256,29 @@ public class EntityLoader<T> implements Loader<T> {
         } catch (ReflectiveOperationException | SQLException e) {
             logger.severe("Failed to handle association field");
             throw new IllegalStateException(e);
+        }
+    }
+
+    public boolean existLazyLoading() {
+        return !metadataLoader.getFieldAllByPredicate(EntityLoader::isLazy).isEmpty();
+    }
+
+    public void updateLazyLoadingField(T parentEntity, PersistenceContext persistenceContext) {
+        List<Field> lazyFields = metadataLoader.getFieldAllByPredicate(EntityLoader::isLazy);
+        Object foreignKey = Clause.extractValue(metadataLoader.getPrimaryKeyField(), parentEntity);
+
+        for (Field lazyField : lazyFields) {
+            Class<?> lazyFieldGenericType = ReflectionUtils.collectionClass(lazyField.getGenericType());
+
+            List<?> lazyProxy = proxyFactory.createProxyCollection(foreignKey, metadataLoader.getEntityType(), lazyFieldGenericType, persistenceContext);
+
+            try {
+                lazyField.setAccessible(true);
+                lazyField.set(parentEntity, lazyProxy);
+            } catch (IllegalAccessException e) {
+                logger.severe("Failed to update lazy loading field");
+                throw new IllegalStateException(e);
+            }
         }
     }
 }

@@ -210,6 +210,10 @@ public class DefaultEntityManager implements EntityManager {
             entry.updateStatus(Status.MANAGED);
         }
 
+        if (entityLoader.existLazyLoading()) {
+            entityLoader.updateLazyLoadingField(loadedEntity, persistenceContext);
+        }
+
         return loadedEntity;
     }
 
