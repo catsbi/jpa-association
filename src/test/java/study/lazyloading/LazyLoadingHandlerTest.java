@@ -17,11 +17,10 @@ import persistence.sql.fixture.TestOrder;
 import persistence.sql.fixture.TestOrderItem;
 
 import java.sql.SQLException;
-import java.util.AbstractCollection;
 import java.util.Collection;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DisplayName("LazyLoadingHandler 테스트")
@@ -54,5 +53,35 @@ class LazyLoadingHandlerTest extends TestEntityInitialize {
                 () -> assertThat(proxy).isNotNull(),
                 () -> assertThat(proxy).hasSize(2)
         );
+    }
+
+    @Test
+    @DisplayName("객체 필드에 접근시 지연로딩을 수행하며 유효한 값을 반환한다.")
+    void invoke() {
+        LazyLoadingHandler<?> handler = LazyLoadingHandler.newInstance(1L, TestOrder.class, TestOrderItem.class, persistenceContext);
+        CollectionEntry collectionEntry = CollectionEntry.create(new SimpleMetadataLoader<>(TestOrderItem.class), Status.MANAGED, (Collection) handler);
+        CollectionKeyHolder collectionKeyHolder = new CollectionKeyHolder(TestOrder.class, 1L, TestOrderItem.class);
+        persistenceContext.addCollectionEntry(collectionKeyHolder, collectionEntry);
+
+        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, persistenceContext);
+
+        assertAll(
+                () -> assertThat(proxy).isNotNull(),
+                () -> assertThat(proxy).hasSize(2),
+                () -> assertThat(proxy).containsExactlyInAnyOrder(
+                        new TestOrderItem(1L,"apple", 10),
+                        new TestOrderItem(2L,"cherry", 20)
+                )
+        );
+    }
+
+    @Test
+    @DisplayName("객체 필드에 접근시 영속성 컨텍스트에 관리되지 않는 경우 예외를 던진다.")
+    void invokeWithInvalidPersistenceContext() {
+        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, persistenceContext);
+
+        assertThatThrownBy(proxy::iterator)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("failed to lazily initialize a collection");
     }
 }
