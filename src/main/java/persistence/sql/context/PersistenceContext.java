@@ -5,7 +5,9 @@ import persistence.sql.entity.CollectionEntry;
 import persistence.sql.entity.EntityEntry;
 import persistence.sql.entity.data.Status;
 
+import java.io.Serializable;
 import java.util.AbstractCollection;
+import java.util.Collection;
 
 public interface PersistenceContext {
 
@@ -15,9 +17,9 @@ public interface PersistenceContext {
 
     <T, ID> EntityEntry getEntry(Class<T> entityType, ID id);
 
-    <T> CollectionEntry<T> getCollectionEntry(AbstractCollection<?> abstractCollection);
+    CollectionEntry getCollectionEntry(CollectionKeyHolder key);
 
-    <T> CollectionEntry<T> addCollectionEntry(AbstractCollection<?> abstractCollection, CollectionEntry<T> collectionEntry);
+    CollectionEntry addCollectionEntry(CollectionKeyHolder key, CollectionEntry collectionEntry);
 
     <T, ID> void deleteEntry(T entity, ID id);
 

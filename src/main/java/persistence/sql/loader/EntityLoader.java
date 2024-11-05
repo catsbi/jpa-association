@@ -9,17 +9,22 @@ import persistence.sql.clause.LeftJoinClause;
 import persistence.sql.clause.WhereConditionalClause;
 import persistence.sql.common.util.CamelToSnakeConverter;
 import persistence.sql.common.util.NameConverter;
+import persistence.sql.context.CollectionKeyHolder;
 import persistence.sql.context.PersistenceContext;
 import persistence.sql.data.QueryType;
 import persistence.sql.dml.Database;
 import persistence.sql.dml.MetadataLoader;
 import persistence.sql.dml.impl.SimpleMetadataLoader;
+import persistence.sql.entity.CollectionEntry;
+import persistence.sql.entity.data.Status;
 import persistence.util.ReflectionUtils;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -269,8 +274,13 @@ public class EntityLoader<T> implements Loader<T> {
 
         for (Field lazyField : lazyFields) {
             Class<?> lazyFieldGenericType = ReflectionUtils.collectionClass(lazyField.getGenericType());
+            MetadataLoader<?> lazyLoader = new SimpleMetadataLoader<>(lazyFieldGenericType);
 
-            List<?> lazyProxy = proxyFactory.createProxyCollection(foreignKey, metadataLoader.getEntityType(), lazyFieldGenericType, persistenceContext);
+            Collection<?> lazyProxy = proxyFactory.createProxyCollection(foreignKey, metadataLoader.getEntityType(), lazyFieldGenericType, persistenceContext);
+            CollectionEntry collectionEntry = CollectionEntry.create(lazyLoader, Status.MANAGED, (List<Object>) lazyProxy);
+
+            CollectionKeyHolder collectionKeyHolder = new CollectionKeyHolder(parentEntity.getClass(), foreignKey, lazyFieldGenericType);
+            persistenceContext.addCollectionEntry(collectionKeyHolder, collectionEntry);
 
             try {
                 lazyField.setAccessible(true);

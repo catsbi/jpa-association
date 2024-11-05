@@ -2,32 +2,36 @@ package persistence.sql.entity;
 
 import jakarta.persistence.Id;
 import persistence.sql.clause.Clause;
-import persistence.sql.context.KeyHolder;
 import persistence.sql.dml.MetadataLoader;
 import persistence.sql.entity.data.Status;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-public class CollectionEntry<T> {
-    private final MetadataLoader<T> loader;
+public class CollectionEntry {
+    private final MetadataLoader<?> genericTypeLoader;
     private boolean loaded;
     private Status status;
-    private List<T> entries;
-    private List<T> snapshotEntries;
+    private Collection<Object> entries;
+    private Collection<Object> snapshotEntries;
 
-    public CollectionEntry(MetadataLoader<T> loader, boolean loaded, Status status, List<T> entries, List<T> snapshotEntries) {
-        this.loader = loader;
+    private CollectionEntry(MetadataLoader<?> loader, boolean loaded, Status status, Collection<Object> entries, Collection<Object> snapshotEntries) {
+        this.genericTypeLoader = loader;
         this.loaded = loaded;
         this.status = status;
         this.entries = entries;
         this.snapshotEntries = snapshotEntries;
     }
 
+    public static CollectionEntry create(MetadataLoader<?> loader, Status status, Collection<Object> entries) {
+        return new CollectionEntry(loader, false, status, entries, null);
+    }
+
     @SuppressWarnings("unchecked")
-    private static <T> List<T> createSnapshot(List<T> entries, MetadataLoader<?> loader) {
+    private static <T> Collection<T> createSnapshot(Collection<T> entries, MetadataLoader<?> loader) {
         try {
             List<T> snapshotEntries = new ArrayList<>(entries.size());
             for (T entry : entries) {
@@ -49,29 +53,36 @@ public class CollectionEntry<T> {
         }
     }
 
-    public List<T> getEntries() {
-        return entries;
+    public <T> List<T> getEntries() {
+        return (List<T>) entries;
     }
 
     public void updateStatus(Status status) {
         this.status = status;
     }
 
-    public void add(T entity) {
+    public void add(Object entity) {
+        if (!genericTypeLoader.getEntityType().isInstance(entity)) {
+            throw new IllegalArgumentException("Invalid entity type");
+        }
+
         this.entries.add(entity);
     }
 
     public void synchronizingSnapshot() {
         if (snapshotEntries == null) {
-            snapshotEntries = createSnapshot(entries, loader);
+            snapshotEntries = createSnapshot(entries, genericTypeLoader);
             return;
         }
 
-        for (int i = 0; i < entries.size(); i++) {
-            T entity = entries.get(i);
-            T snapshot = snapshotEntries.get(i);
+        List<Object> entryArrayList = new ArrayList<>(entries);
+        List<Object> snapshotArrayList = new ArrayList<>(snapshotEntries);
 
-            loader.getFieldAllByPredicate(field -> !field.isAnnotationPresent(Id.class))
+        for (int i = 0; i < entries.size(); i++) {
+            Object entity = entryArrayList.get(i);
+            Object snapshot = snapshotArrayList.get(i);
+
+            genericTypeLoader.getFieldAllByPredicate(field -> !field.isAnnotationPresent(Id.class))
                     .forEach(field -> copyFieldValue(field, entity, snapshot));
         }
     }
@@ -94,10 +105,12 @@ public class CollectionEntry<T> {
         if (!(snapshotEntries == null && entries == null) && snapshotEntries == null || entries == null) {
             return true;
         }
+        List<Object> entryArrayList = new ArrayList<>(entries);
+        List<Object> snapshotArrayList = new ArrayList<>(snapshotEntries);
 
         for (int i = 0; i < entries.size(); i++) {
-            T entity = entries.get(i);
-            T snapshot = snapshotEntries.get(i);
+            Object entity = entryArrayList.get(i);
+            Object snapshot = snapshotArrayList.get(i);
 
             if (isDirty(entity, snapshot)) {
                 return true;
@@ -107,12 +120,12 @@ public class CollectionEntry<T> {
         return false;
     }
 
-    public boolean isDirty(T entity, T snapshot) {
+    public boolean isDirty(Object entity, Object snapshot) {
         if (!(snapshot == null && entity == null) && snapshot == null || entity == null) {
             return true;
         }
 
-        List<Field> fields = loader.getFieldAllByPredicate(field -> {
+        List<Field> fields = genericTypeLoader.getFieldAllByPredicate(field -> {
             Object entityValue = Clause.extractValue(field, entity);
             Object snapshotValue = Clause.extractValue(field, snapshot);
 
@@ -135,8 +148,8 @@ public class CollectionEntry<T> {
         return !Status.isManaged(status);
     }
 
-    public List<T> getSnapshotEntries() {
-        return Collections.unmodifiableList(snapshotEntries);
+    public <T> List<T> getSnapshotEntries() {
+        return new ArrayList<>((Collection<? extends T>) snapshotEntries);
     }
 
     public Status getStatus() {
@@ -147,9 +160,9 @@ public class CollectionEntry<T> {
         return loaded;
     }
 
-    public void updateEntries(List<T> target) {
+    public void updateEntries(List<Object> target) {
         this.entries = target;
-        this.snapshotEntries = createSnapshot(target, loader);
+        this.snapshotEntries = createSnapshot(target, genericTypeLoader);
         this.loaded = true;
     }
 }

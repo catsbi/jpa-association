@@ -2,11 +2,14 @@ package persistence.proxy.impl;
 
 import org.jetbrains.annotations.NotNull;
 import persistence.sql.EntityLoaderFactory;
+import persistence.sql.context.CollectionKeyHolder;
 import persistence.sql.context.KeyHolder;
 import persistence.sql.context.PersistenceContext;
+import persistence.sql.dml.MetadataLoader;
 import persistence.sql.entity.CollectionEntry;
 import persistence.sql.loader.EntityLoader;
 
+import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.AbstractCollection;
@@ -16,7 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-public class LazyLoadingHandler<T> extends AbstractCollection<T> implements InvocationHandler {
+public class LazyLoadingHandler<T> extends AbstractCollection<T> implements InvocationHandler, Serializable {
     private static final Logger logger = Logger.getLogger(LazyLoadingHandler.class.getName());
 
     private final PersistenceContext persistenceContext;
@@ -51,7 +54,7 @@ public class LazyLoadingHandler<T> extends AbstractCollection<T> implements Invo
     }
 
     private void realize() {
-        CollectionEntry<T> entry = persistenceContext.getCollectionEntry(this);
+        CollectionEntry entry = persistenceContext.getCollectionEntry(getCollectionKeyHolder());
         if (entry == null) {
             throw new IllegalStateException("failed to lazily initialize a collection");
         }
@@ -64,8 +67,13 @@ public class LazyLoadingHandler<T> extends AbstractCollection<T> implements Invo
 
         EntityLoader<?> targetLoader = EntityLoaderFactory.getInstance().getLoader(parentKeyHolder.entityType());
         target = entityLoader.loadAllByForeignKey(parentKeyHolder.key(), targetLoader.getMetadataLoader());
-        entry.updateEntries(target);
+        entry.updateEntries((List<Object>) target);
         loaded = true;
+    }
+
+    private CollectionKeyHolder getCollectionKeyHolder() {
+        MetadataLoader<T> metadataLoader = entityLoader.getMetadataLoader();
+        return new CollectionKeyHolder(parentKeyHolder.entityType(), parentKeyHolder.key(), metadataLoader.getEntityType());
     }
 
     @NotNull
@@ -90,14 +98,14 @@ public class LazyLoadingHandler<T> extends AbstractCollection<T> implements Invo
         if (this == o) {
             return true;
         }
-        if (!(o instanceof LazyLoadingHandler that)) {
+        if (!(o instanceof LazyLoadingHandler<?> that)) {
             return false;
         }
-        return Objects.equals(parentKeyHolder, that.parentKeyHolder) && Objects.equals(target, that.target);
+        return loaded == that.loaded && Objects.equals(persistenceContext, that.persistenceContext) && Objects.equals(parentKeyHolder, that.parentKeyHolder) && Objects.equals(entityLoader, that.entityLoader) && Objects.equals(target, that.target);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(parentKeyHolder, target);
+        return Objects.hash(persistenceContext, parentKeyHolder, entityLoader, target, loaded);
     }
 }

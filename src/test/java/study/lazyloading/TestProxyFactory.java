@@ -8,21 +8,21 @@ import persistence.sql.context.PersistenceContext;
 import persistence.sql.loader.EntityLoader;
 
 import java.lang.reflect.Proxy;
-import java.util.List;
+import java.util.Collection;
 
 public class TestProxyFactory implements ProxyFactory {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T, C extends List<T>> C createProxyCollection(Object foreignKey,
+    public <T, C extends Collection<T>> C createProxyCollection(Object foreignKey,
                                                                 Class<?> foreignType,
                                                                 Class<T> targetClass,
                                                                 PersistenceContext persistenceContext) {
         EntityLoader<T> loader = EntityLoaderFactory.getInstance().getLoader(targetClass);
 
         return (C) Proxy.newProxyInstance(
-                List.class.getClassLoader(),
-                new Class[]{List.class},
+                Collection.class.getClassLoader(),
+                new Class[]{Collection.class},
                 new LazyLoadingHandler<>(new KeyHolder(foreignType, foreignKey), loader, persistenceContext)
         );
     }
