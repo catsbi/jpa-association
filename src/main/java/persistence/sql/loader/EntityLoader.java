@@ -271,11 +271,11 @@ public class EntityLoader<T> implements Loader<T> {
         Object foreignKey = Clause.extractValue(metadataLoader.getPrimaryKeyField(), parentEntity);
 
         for (Field lazyField : lazyFields) {
-            Class<? extends Collection> lazyFieldType = ReflectionUtils.getCollectionFieldType(lazyField);
+            Class<? extends Collection<Object>> lazyFieldType = ReflectionUtils.getCollectionFieldType(lazyField);
             Class<?> lazyFieldGenericType = ReflectionUtils.collectionClass(lazyField.getGenericType());
             MetadataLoader<?> lazyLoader = new SimpleMetadataLoader<>(lazyFieldGenericType);
 
-            Collection<Object> lazyProxy = (Collection<Object>) proxyFactory.createProxyCollection(foreignKey,
+            Collection<Object> lazyProxy = proxyFactory.createProxyCollection(foreignKey,
                     metadataLoader.getEntityType(),
                     lazyFieldGenericType,
                     lazyFieldType,

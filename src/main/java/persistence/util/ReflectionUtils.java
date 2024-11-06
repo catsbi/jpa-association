@@ -28,9 +28,9 @@ public class ReflectionUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static Class<? extends Collection<?>> getCollectionFieldType(Field field) {
+    public static Class<? extends Collection<Object>> getCollectionFieldType(Field field) {
         if (Collection.class.isAssignableFrom(field.getType())) {
-            return (Class<? extends Collection<?>>) field.getType();
+            return (Class<? extends Collection<Object>>) field.getType();
         }
         throw new IllegalArgumentException("Field is not a Collection type");
     }

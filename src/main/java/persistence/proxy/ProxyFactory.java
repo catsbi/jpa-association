@@ -16,7 +16,7 @@ public interface ProxyFactory {
      * @param <C>         컬렉션 타입
      * @return Proxy로 감싼 Collection
      */
-    <T, C extends Collection<T>> C createProxyCollection(Object foreignKey,
+    <T, C extends Collection<Object>> C createProxyCollection(Object foreignKey,
                                                          Class<?> foreignType,
                                                          Class<T> targetClass,
                                                          Class<C> collectionType,

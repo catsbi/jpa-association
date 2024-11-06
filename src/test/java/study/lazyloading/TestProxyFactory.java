@@ -14,7 +14,7 @@ public class TestProxyFactory implements ProxyFactory {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T, C extends Collection<T>> C createProxyCollection(Object foreignKey,
+    public <T, C extends Collection<Object>> C createProxyCollection(Object foreignKey,
                                                                 Class<?> foreignType,
                                                                 Class<T> targetClass,
                                                                 Class<C> collectionType,
