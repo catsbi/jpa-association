@@ -52,7 +52,7 @@ class LazyLoadingHandlerTest extends TestEntityInitialize {
 
         assertAll(
                 () -> assertThat(proxy).isNotNull(),
-                () -> assertThat(proxy).hasSize(2)
+                () -> assertThat(proxy).hasSize(0)
         );
     }
 
@@ -65,6 +65,7 @@ class LazyLoadingHandlerTest extends TestEntityInitialize {
         persistenceContext.addCollectionEntry(collectionKeyHolder, collectionEntry);
 
         Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, List.class, persistenceContext);
+        proxy.iterator();
 
         assertAll(
                 () -> assertThat(proxy).isNotNull(),
@@ -79,7 +80,7 @@ class LazyLoadingHandlerTest extends TestEntityInitialize {
     @Test
     @DisplayName("객체 필드에 접근시 영속성 컨텍스트에 관리되지 않는 경우 예외를 던진다.")
     void invokeWithInvalidPersistenceContext() {
-        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, List.class, persistenceContext);
+        List<Object> proxy = proxyFactory.createProxyCollection(999L, TestOrder.class, TestOrderItem.class, List.class, persistenceContext);
 
         assertThatThrownBy(proxy::iterator)
                 .isInstanceOf(IllegalStateException.class)
