@@ -13,7 +13,6 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.AbstractCollection;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -45,8 +44,8 @@ public class LazyLoadingHandler<T> extends AbstractCollection<T> implements Invo
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        logger.info("invoke method name: %s, args: %s".formatted(method.getName(), Arrays.toString(args)));
         if (!loaded) {
+            logger.info("lazy loading... | from method: " + method.getName());
             realize();
         }
 
@@ -69,6 +68,7 @@ public class LazyLoadingHandler<T> extends AbstractCollection<T> implements Invo
         target = entityLoader.loadAllByForeignKey(parentKeyHolder.key(), targetLoader.getMetadataLoader());
         entry.updateEntries((List<Object>) target);
         loaded = true;
+        logger.info("completed lazy loading");
     }
 
     private CollectionKeyHolder getCollectionKeyHolder() {

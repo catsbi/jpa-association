@@ -3,7 +3,6 @@ package persistence.proxy;
 import persistence.sql.context.PersistenceContext;
 
 import java.util.Collection;
-import java.util.List;
 
 public interface ProxyFactory {
 
@@ -18,7 +17,8 @@ public interface ProxyFactory {
      * @return Proxy로 감싼 Collection
      */
     <T, C extends Collection<T>> C createProxyCollection(Object foreignKey,
-                                                   Class<?> foreignType,
-                                                   Class<T> targetClass,
-                                                   PersistenceContext persistenceContext);
+                                                         Class<?> foreignType,
+                                                         Class<T> targetClass,
+                                                         Class<C> collectionType,
+                                                         PersistenceContext persistenceContext);
 }

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import persistence.config.TestPersistenceConfig;
 import persistence.sql.dml.EntityManager;
 import persistence.sql.dml.TestEntityInitialize;
+import persistence.sql.fixture.LazyTestOrder;
+import persistence.sql.fixture.LazyTestOrderItem;
 import persistence.sql.fixture.TestOrder;
 import persistence.sql.fixture.TestOrderItem;
 import persistence.sql.fixture.TestPerson;
@@ -198,6 +200,31 @@ class DefaultEntityManagerTest extends TestEntityInitialize {
 
         // when
         TestOrder actual = entityManager.find(TestOrder.class, testOrder.getId());
+
+        // then
+        assertAll(
+                () -> assertThat(actual).isNotNull(),
+                () -> assertThat(actual.getOrderItems()).hasSize(2),
+                () -> assertThat(actual.getOrderItems()).containsAll(List.of(apple, grape))
+        );
+    }
+
+    @Test
+    @DisplayName("find 함수는 연관관계 엔티티가 있고, 지연로딩 객체가 있는 경우 프록시 객체로 값을 설정해 반환한다.")
+    void testFindWithLazyLoading() {
+        // given
+        LazyTestOrder testOrder = new LazyTestOrder("order1");
+        LazyTestOrderItem apple = new LazyTestOrderItem("apple", 10);
+        LazyTestOrderItem grape = new LazyTestOrderItem("grape", 20);
+        testOrder.addOrderItem(apple);
+        testOrder.addOrderItem(grape);
+
+        entityManager.persist(testOrder);
+        entityManager.getTransaction().begin();
+        entityManager.getTransaction().commit();
+
+        // when
+        LazyTestOrder actual = entityManager.find(LazyTestOrder.class, testOrder.getId());
 
         // then
         assertAll(

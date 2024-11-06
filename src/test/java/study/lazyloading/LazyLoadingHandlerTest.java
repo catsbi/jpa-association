@@ -18,6 +18,7 @@ import persistence.sql.fixture.TestOrderItem;
 
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,7 +48,7 @@ class LazyLoadingHandlerTest extends TestEntityInitialize {
         CollectionKeyHolder collectionKeyHolder = new CollectionKeyHolder(TestOrder.class, 1L, TestOrderItem.class);
         persistenceContext.addCollectionEntry(collectionKeyHolder, collectionEntry);
 
-        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, persistenceContext);
+        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, List.class, persistenceContext);
 
         assertAll(
                 () -> assertThat(proxy).isNotNull(),
@@ -63,14 +64,14 @@ class LazyLoadingHandlerTest extends TestEntityInitialize {
         CollectionKeyHolder collectionKeyHolder = new CollectionKeyHolder(TestOrder.class, 1L, TestOrderItem.class);
         persistenceContext.addCollectionEntry(collectionKeyHolder, collectionEntry);
 
-        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, persistenceContext);
+        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, List.class, persistenceContext);
 
         assertAll(
                 () -> assertThat(proxy).isNotNull(),
                 () -> assertThat(proxy).hasSize(2),
                 () -> assertThat(proxy).containsExactlyInAnyOrder(
-                        new TestOrderItem(1L,"apple", 10),
-                        new TestOrderItem(2L,"cherry", 20)
+                        new TestOrderItem(1L, "apple", 10),
+                        new TestOrderItem(2L, "cherry", 20)
                 )
         );
     }
@@ -78,7 +79,7 @@ class LazyLoadingHandlerTest extends TestEntityInitialize {
     @Test
     @DisplayName("객체 필드에 접근시 영속성 컨텍스트에 관리되지 않는 경우 예외를 던진다.")
     void invokeWithInvalidPersistenceContext() {
-        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, persistenceContext);
+        Collection<TestOrderItem> proxy = proxyFactory.createProxyCollection(1L, TestOrder.class, TestOrderItem.class, List.class, persistenceContext);
 
         assertThatThrownBy(proxy::iterator)
                 .isInstanceOf(IllegalStateException.class)

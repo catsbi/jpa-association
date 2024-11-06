@@ -19,12 +19,10 @@ import persistence.sql.entity.CollectionEntry;
 import persistence.sql.entity.data.Status;
 import persistence.util.ReflectionUtils;
 
-import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -204,7 +202,7 @@ public class EntityLoader<T> implements Loader<T> {
         try {
             T entity = metadataLoader.getNoArgConstructor().newInstance();
 
-            int columnCount = metadataLoader.getColumnCount();
+            int columnCount = metadataLoader.getFieldAllByPredicate(field -> !isLazy(field)).size();
             AtomicInteger cur = new AtomicInteger(1);
 
             while (cur.get() <= columnCount) {
@@ -273,11 +271,16 @@ public class EntityLoader<T> implements Loader<T> {
         Object foreignKey = Clause.extractValue(metadataLoader.getPrimaryKeyField(), parentEntity);
 
         for (Field lazyField : lazyFields) {
+            Class<? extends Collection> lazyFieldType = ReflectionUtils.getCollectionFieldType(lazyField);
             Class<?> lazyFieldGenericType = ReflectionUtils.collectionClass(lazyField.getGenericType());
             MetadataLoader<?> lazyLoader = new SimpleMetadataLoader<>(lazyFieldGenericType);
 
-            Collection<?> lazyProxy = proxyFactory.createProxyCollection(foreignKey, metadataLoader.getEntityType(), lazyFieldGenericType, persistenceContext);
-            CollectionEntry collectionEntry = CollectionEntry.create(lazyLoader, Status.MANAGED, (List<Object>) lazyProxy);
+            Collection<Object> lazyProxy = (Collection<Object>) proxyFactory.createProxyCollection(foreignKey,
+                    metadataLoader.getEntityType(),
+                    lazyFieldGenericType,
+                    lazyFieldType,
+                    persistenceContext);
+            CollectionEntry collectionEntry = CollectionEntry.create(lazyLoader, Status.MANAGED, lazyProxy);
 
             CollectionKeyHolder collectionKeyHolder = new CollectionKeyHolder(parentEntity.getClass(), foreignKey, lazyFieldGenericType);
             persistenceContext.addCollectionEntry(collectionKeyHolder, collectionEntry);
