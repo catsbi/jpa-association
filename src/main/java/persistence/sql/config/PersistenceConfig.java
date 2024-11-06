@@ -27,6 +27,7 @@ public class PersistenceConfig {
     private static final PersistenceConfig INSTANCE = new PersistenceConfig();
 
     private DatabaseServer databaseServer;
+    private PersistenceContext persistenceContext;
 
     private PersistenceConfig() {
     }
@@ -71,7 +72,10 @@ public class PersistenceConfig {
     }
 
     public PersistenceContext persistenceContext() throws SQLException {
-        return new DefaultPersistenceContext();
+        if (persistenceContext == null) {
+            persistenceContext = new DefaultPersistenceContext();
+        }
+        return persistenceContext;
     }
 
     public Database database() throws SQLException {

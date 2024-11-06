@@ -31,6 +31,7 @@ public class TestPersistenceConfig {
     private static final TestPersistenceConfig INSTANCE = new TestPersistenceConfig();
 
     private DatabaseServer databaseServer;
+    private PersistenceContext persistenceContext;
 
     private TestPersistenceConfig() {
     }
@@ -79,7 +80,10 @@ public class TestPersistenceConfig {
     }
 
     public PersistenceContext persistenceContext() throws SQLException {
-        return new DefaultPersistenceContext();
+        if (persistenceContext == null) {
+            persistenceContext = new DefaultPersistenceContext();
+        }
+        return persistenceContext;
     }
 
     public Database database() throws SQLException {

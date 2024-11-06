@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import persistence.config.TestPersistenceConfig;
+import persistence.sql.context.PersistenceContext;
 import persistence.sql.dml.EntityManager;
 import persistence.sql.dml.TestEntityInitialize;
 import persistence.sql.fixture.LazyTestOrder;
@@ -12,8 +13,11 @@ import persistence.sql.fixture.LazyTestOrderItem;
 import persistence.sql.fixture.TestOrder;
 import persistence.sql.fixture.TestOrderItem;
 import persistence.sql.fixture.TestPerson;
+import persistence.util.TestReflectionUtils;
 
+import java.lang.reflect.Proxy;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,11 +27,13 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 @DisplayName("DefaultEntityManager 테스트")
 class DefaultEntityManagerTest extends TestEntityInitialize {
     private EntityManager entityManager;
+    private PersistenceContext persistenceContext;
 
     @BeforeEach
     void setUp() throws SQLException {
         TestPersistenceConfig config = TestPersistenceConfig.getInstance();
         entityManager = config.entityManager();
+        persistenceContext = config.persistenceContext();
     }
 
     @Test
@@ -220,17 +226,19 @@ class DefaultEntityManagerTest extends TestEntityInitialize {
         testOrder.addOrderItem(grape);
 
         entityManager.persist(testOrder);
-        entityManager.getTransaction().begin();
-        entityManager.getTransaction().commit();
+        TestReflectionUtils.setFieldValue(persistenceContext, "context", new HashMap<>());
+        TestReflectionUtils.setFieldValue(persistenceContext, "collectionContext", new HashMap<>());
 
         // when
         LazyTestOrder actual = entityManager.find(LazyTestOrder.class, testOrder.getId());
 
         // then
         assertAll(
+                () -> assertThat(actual.getOrderItems()).isInstanceOf(Proxy.class),
                 () -> assertThat(actual).isNotNull(),
-                () -> assertThat(actual.getOrderItems()).hasSize(2),
-                () -> assertThat(actual.getOrderItems()).containsAll(List.of(apple, grape))
+                () -> assertThat(actual.getOrderItems().size()).isEqualTo(0),
+                () -> assertThat(actual.getOrderItems()).containsAll(List.of(apple, grape)),
+                () -> assertThat(actual.getOrderItems().size()).isEqualTo(2)
         );
     }
 
